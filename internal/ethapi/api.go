@@ -369,6 +369,10 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 
+	fmt.Println(tx.GetTransactionTimestamp())
+	tx.SetTransactionTimestamp(*args.Timestamp)
+	fmt.Println(tx.GetTransactionTimestamp())
+
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
 
@@ -376,6 +380,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 // tries to sign it with the key associated with args.To. If the given passwd isn't
 // able to decrypt the key it fails.
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+	fmt.Println("Sending Transaction")
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -1213,6 +1218,7 @@ type RPCTransaction struct {
 	Hash             common.Hash     `json:"hash"`
 	Input            hexutil.Bytes   `json:"input"`
 	Nonce            hexutil.Uint64  `json:"nonce"`
+	Timestamp        time.Time       `json:"timestamp"`
 	To               *common.Address `json:"to"`
 	TransactionIndex *hexutil.Uint64 `json:"transactionIndex"`
 	Value            *hexutil.Big    `json:"value"`
@@ -1232,17 +1238,18 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	v, r, s := tx.RawSignatureValues()
 
 	result := &RPCTransaction{
-		From:     from,
-		Gas:      hexutil.Uint64(tx.Gas()),
-		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
+		From:      from,
+		Gas:       hexutil.Uint64(tx.Gas()),
+		GasPrice:  (*hexutil.Big)(tx.GasPrice()),
+		Hash:      tx.Hash(),
+		Input:     hexutil.Bytes(tx.Data()),
+		Nonce:     hexutil.Uint64(tx.Nonce()),
+		Timestamp: tx.GetTransactionTimestamp(),
+		To:        tx.To(),
+		Value:     (*hexutil.Big)(tx.Value()),
+		V:         (*hexutil.Big)(v),
+		R:         (*hexutil.Big)(r),
+		S:         (*hexutil.Big)(s),
 	}
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = &blockHash
@@ -1468,12 +1475,13 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Nonce    *hexutil.Uint64 `json:"nonce"`
+	From      common.Address  `json:"from"`
+	To        *common.Address `json:"to"`
+	Gas       *hexutil.Uint64 `json:"gas"`
+	GasPrice  *hexutil.Big    `json:"gasPrice"`
+	Value     *hexutil.Big    `json:"value"`
+	Nonce     *hexutil.Uint64 `json:"nonce"`
+	Timestamp *time.Time      `json:"timestamp"`
 	// We accept "data" and "input" for backwards-compatibility reasons. "input" is the
 	// newer name and should be preferred by clients.
 	Data  *hexutil.Bytes `json:"data"`
@@ -1482,6 +1490,10 @@ type SendTxArgs struct {
 
 // setDefaults is a helper function that fills in default values for unspecified tx fields.
 func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
+	if args.Timestamp == nil {
+		currentTime := time.Now()
+		args.Timestamp = &currentTime
+	}
 	if args.GasPrice == nil {
 		price, err := b.SuggestPrice(ctx)
 		if err != nil {

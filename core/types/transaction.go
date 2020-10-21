@@ -19,6 +19,7 @@ package types
 import (
 	"container/heap"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"sync/atomic"
@@ -273,6 +274,16 @@ func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return tx.data.V, tx.data.R, tx.data.S
 }
 
+// GetTransactionTimestamp sets the timestamp of the transaction.
+func (tx *Transaction) GetTransactionTimestamp() time.Time {
+	return tx.time
+}
+
+// SetTransactionTimestamp sets the timestamp of the transaction.
+func (tx *Transaction) SetTransactionTimestamp(time time.Time) {
+	tx.time = time
+}
+
 // Transactions is a Transaction slice type for basic sorting.
 type Transactions []*Transaction
 
@@ -325,6 +336,19 @@ func (s TxByPriceAndTime) Less(i, j int) bool {
 	// deterministic sorting
 	cmp := s[i].data.Price.Cmp(s[j].data.Price)
 	if cmp == 0 {
+		if s[i].data.Price.String() == "2707187500" {
+			fmt.Println(s[i].time, s[j].time)
+
+			if s[i].time.Before(s[j].time) {
+				fmt.Println("1st txn is earlier than 2nd txn")
+			} else {
+				fmt.Println("2nd txn is earlier than 1st txn")
+			}
+
+			fmt.Println(s[i].data.GasLimit, s[j].data.GasLimit)
+			fmt.Println(s[j].data.Price)
+			fmt.Println("-----------------------------------------------------")
+		}
 		return s[i].time.Before(s[j].time)
 	}
 	return cmp > 0
