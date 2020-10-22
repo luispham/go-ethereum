@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -49,9 +50,10 @@ type TransactOpts struct {
 	Nonce  *big.Int       // Nonce to use for the transaction execution (nil = use pending state)
 	Signer SignerFn       // Method to use for signing the transaction (mandatory)
 
-	Value    *big.Int // Funds to transfer along the transaction (nil = 0 = no funds)
-	GasPrice *big.Int // Gas price to use for the transaction execution (nil = gas price oracle)
-	GasLimit uint64   // Gas limit to set for the transaction execution (0 = estimate)
+	Value     *big.Int   // Funds to transfer along the transaction (nil = 0 = no funds)
+	GasPrice  *big.Int   // Gas price to use for the transaction execution (nil = gas price oracle)
+	GasLimit  uint64     // Gas limit to set for the transaction execution (0 = estimate)
+	Timestamp *time.Time // Timestamp
 
 	Context context.Context // Network context to support cancellation and timeouts (nil = no timeout)
 }
@@ -218,6 +220,11 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	} else {
 		nonce = opts.Nonce.Uint64()
 	}
+	timestamp := opts.Timestamp
+	if timestamp == nil {
+		currentTime := time.Now()
+		timestamp = &currentTime
+	}
 	// Figure out the gas allowance and gas price values
 	gasPrice := opts.GasPrice
 	if gasPrice == nil {
@@ -246,9 +253,9 @@ func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, i
 	// Create the transaction, sign it and schedule it for execution
 	var rawTx *types.Transaction
 	if contract == nil {
-		rawTx = types.NewContractCreation(nonce, value, gasLimit, gasPrice, input)
+		rawTx = types.NewContractCreation(nonce, value, gasLimit, gasPrice, input, *timestamp)
 	} else {
-		rawTx = types.NewTransaction(nonce, c.address, value, gasLimit, gasPrice, input)
+		rawTx = types.NewTransaction(nonce, c.address, value, gasLimit, gasPrice, input, *timestamp)
 	}
 	if opts.Signer == nil {
 		return nil, errors.New("no signer to authorize the transaction with")

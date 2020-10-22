@@ -75,15 +75,15 @@ type txdataMarshaling struct {
 	S            *hexutil.Big
 }
 
-func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data)
+func NewTransaction(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, timestamp time.Time) *Transaction {
+	return newTransaction(nonce, &to, amount, gasLimit, gasPrice, data, timestamp)
 }
 
-func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
-	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data)
+func NewContractCreation(nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, timestamp time.Time) *Transaction {
+	return newTransaction(nonce, nil, amount, gasLimit, gasPrice, data, timestamp)
 }
 
-func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *Transaction {
+func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, timestamp time.Time) *Transaction {
 	if len(data) > 0 {
 		data = common.CopyBytes(data)
 	}
@@ -106,7 +106,7 @@ func newTransaction(nonce uint64, to *common.Address, amount *big.Int, gasLimit 
 	}
 	return &Transaction{
 		data: d,
-		time: time.Now(),
+		time: timestamp,
 	}
 }
 
@@ -340,12 +340,13 @@ func (s TxByPriceAndTime) Less(i, j int) bool {
 			fmt.Println(s[i].time, s[j].time)
 
 			if s[i].time.Before(s[j].time) {
-				fmt.Println("1st txn is earlier than 2nd txn")
+				fmt.Println(s[i].data.AccountNonce, "is before", s[j].data.AccountNonce)
+			} else if s[j].time.Before(s[i].time) {
+				fmt.Println(s[j].data.AccountNonce, "is before", s[i].data.AccountNonce)
 			} else {
-				fmt.Println("2nd txn is earlier than 1st txn")
+				fmt.Println("Both txn have same time")
 			}
 
-			fmt.Println(s[i].data.GasLimit, s[j].data.GasLimit)
 			fmt.Println(s[j].data.Price)
 			fmt.Println("-----------------------------------------------------")
 		}

@@ -370,8 +370,8 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args *SendTxArg
 	tx := args.toTransaction()
 
 	fmt.Println(tx.GetTransactionTimestamp())
-	tx.SetTransactionTimestamp(*args.Timestamp)
-	fmt.Println(tx.GetTransactionTimestamp())
+	// tx.SetTransactionTimestamp(*args.Timestamp)
+	// fmt.Println(tx.GetTransactionTimestamp())
 
 	return wallet.SignTxWithPassphrase(account, passwd, tx, s.b.ChainConfig().ChainID)
 }
@@ -1560,9 +1560,9 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 		input = *args.Data
 	}
 	if args.To == nil {
-		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
+		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input, *args.Timestamp)
 	}
-	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
+	return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input, *args.Timestamp)
 }
 
 // SubmitTransaction is a helper function that submits tx to txPool and logs a message.
